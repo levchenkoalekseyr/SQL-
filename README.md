@@ -1,4 +1,3 @@
-<img width="638" height="185" alt="image" src="https://github.com/user-attachments/assets/d512ee20-2e1b-421c-8252-216eb684b785" /># SQL
 # В этой ветке выкладываю тренировочные SQL запросы
 
 
@@ -9,8 +8,14 @@
 
 Решение
 
-<img width="840" height="172" alt="image" src="https://github.com/user-attachments/assets/388fa7ec-0a60-40dd-9d0a-3ec49177fc13" />
-
+```SQL
+with adult_crocodiles AS (
+    select crocodiles.id AS id, dict_common_name.name AS common_name, crocodiles.observed_weight AS observed_weight, dict_age.name AS age from crocodiles
+    JOIN dict_age ON crocodiles.age_id = dict_age.id
+    JOIN dict_common_name ON crocodiles.common_name_id = dict_common_name.id
+    WHERE observed_weight > 1000 and dict_age.name = 'Adult')
+select * from adult_crocodiles
+```
 
 Задача 2
 
