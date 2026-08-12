@@ -3,22 +3,17 @@
 
 
 ## CTE, множественный и рекурсиный CTE
-###Задача 1
+Задача 1
+С помощью конструкции WITH выберите всех взрослых крокодилов (Adult), у которых вес больше 1000.
+Решение
 
 <img width="840" height="172" alt="image" src="https://github.com/user-attachments/assets/388fa7ec-0a60-40dd-9d0a-3ec49177fc13" />
 
 
-###Задача 2
+Задача 2
 С помощью CTE найдите среднюю длину крокодилов по каждому региону, а затем выведите только те регионы, где средняя длина больше 3 метров.
 Решение
-WITH SrDlina AS (
-    SELECT dict_region.name AS region, AVG (observed_length) AS avg_length
-    FROM crocodiles
-    JOIN dict_region ON crocodiles.region_id = dict_region.id
-    GROUP BY dict_region.name
-    HAVING AVG(observed_length) > 3
-    ORDER BY AVG(observed_length) DESC)
-SELECT * FROM SrDlina
+
 
 ###Задача 3
 С помощью CTE найдите среднюю длину крокодилов по каждому региону, а затем выведите только те регионы, где средняя длина больше 3 метров.
