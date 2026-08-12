@@ -6,8 +6,6 @@
 
 С помощью конструкции WITH выберите всех взрослых крокодилов (Adult), у которых вес больше 1000.
 
-Решение
-
 ```SQL
 with adult_crocodiles AS (
     select crocodiles.id AS id, dict_common_name.name AS common_name, crocodiles.observed_weight AS observed_weight, dict_age.name AS age from crocodiles
@@ -21,38 +19,39 @@ select * from adult_crocodiles
 
 С помощью CTE найдите среднюю длину крокодилов по каждому региону, а затем выведите только те регионы, где средняя длина больше 3 метров.
 
-Решение
-
-<img width="638" height="185" alt="image" src="https://github.com/user-attachments/assets/32e3d54f-15e3-4b9b-8ae5-7b4c3022f49b" />
+```SQL
+WITH SrDlina AS (
+    SELECT dict_region.name AS region, AVG (observed_length) AS avg_length
+    FROM crocodiles
+    JOIN dict_region ON crocodiles.region_id = dict_region.id
+    GROUP BY dict_region.name
+    HAVING AVG(observed_length) > 3
+    ORDER BY AVG(observed_length) DESC)
+SELECT * FROM SrDlina
+```
 
 
 Задача 3
 
 С помощью CTE найдите среднюю длину крокодилов по каждому региону, а затем выведите только те регионы, где средняя длина больше 3 метров.
 
-Решение
-
-<img width="638" height="185" alt="image" src="https://github.com/user-attachments/assets/c8a2a62d-d5c7-4b91-9623-e4c3c618e6b0" />
-
+```SQL
+```
 
 Задача 4
 
 4.1. На первом этапе добавьте каждому наблюдению номер строки (ROW_NUMBER) внутри региона (по дате наблюдения).
 4.2. На втором этапе выберите только первые наблюдения по каждому региону.
 
-Решение
-
-<img width="928" height="207" alt="image" src="https://github.com/user-attachments/assets/6828df60-d1e8-4ff0-a9b1-1f7cba9ef108" />
-
+```SQL
+```
 
 Задача 5
 
 С помощью конструкции WITH и оконной функции определите самого тяжёлого крокодила в каждом виде.
 
-Решение
-
-<img width="790" height="183" alt="image" src="https://github.com/user-attachments/assets/da030bf7-33f1-4b58-b09e-7a14f4c3c161" />
-
+```SQL
+```
 
 Задача 6
 
@@ -61,10 +60,8 @@ select * from adult_crocodiles
 6.3. В основном запросе выведите виды, у которых есть хотя бы один крупный крокодил, и их количество.
 6.4. Отсортируйте по полю large_countпо убыванию. 
 
-Решение
-
-<img width="908" height="250" alt="image" src="https://github.com/user-attachments/assets/98b3357a-20ed-4472-ae76-74eccbf7e8da" />
-
+```SQL
+```
 
 Задача 7
 7.1. В первом CTE (region_stats) для каждого региона посчитайте общее количество наблюдений и средний вес крокодилов.
@@ -72,34 +69,27 @@ select * from adult_crocodiles
 7.3. В основном запросе присоедините отфильтрованный список регионов к исходной таблице crocodiles, чтобы вывести всех крокодилов из этих "тяжелых" регионов.
 7.4. Отсортировать по умолчанию по полям region_name и id.
 
-Решение
-
-<img width="896" height="395" alt="image" src="https://github.com/user-attachments/assets/19437f30-b6fd-4e43-986d-4f0e9a2b5cbd" />
-
+```SQL
+```
 
 Задача 8
 Создайте простой список, показывающий статус сохранения вида каждого крокодила и фамилию сотрудника, который его наблюдал. Используйте два CTE: один для статусов сохранения, другой для информации о сотрудниках. Выведите только 7 записей.
 
-Решение
-
-<img width="871" height="241" alt="image" src="https://github.com/user-attachments/assets/dc73d96e-a7ed-4e8c-a80b-1017e4b99a31" />
+```SQL
+```
 
 
 Задача 9
 Покажите список, в котором для каждого крокодила указана страна, где он был найден, и тип среды обитания. Используйте два CTE: один для регионов, другой для мест обитания. Выведите только 10 первых записей.
 
-Решение
-
-<img width="658" height="235" alt="image" src="https://github.com/user-attachments/assets/d14728d8-ca5b-482a-b268-19a02426c891" />
-
+```SQL
+```
 
 Задача 10
 Посчитайте, сколько крокодилов каждого возраста и пола было зафиксировано. Используйте два CTE: один для расшифровки возраста, другой для расшифровки пола. Сгруппируйте результаты по возрасту и полу.
 
-Решение
-
-<img width="578" height="277" alt="image" src="https://github.com/user-attachments/assets/5594212b-ec02-4e65-ab40-799994cd5205" />
-
+```SQL
+```
 
 Задача 11
 Создайте иерархию весовых категорий:
@@ -108,42 +98,17 @@ select * from adult_crocodiles
     Тяжелые: > 400 кг
 Выведите количество крокодилов в каждой категории.
 
-Решение
-
-<img width="840" height="477" alt="image" src="https://github.com/user-attachments/assets/dbe86dbf-8be2-4d40-9433-2c84a05fc1b5" />
-
+```SQL
+```
 
 Задача 12
 Выведите все наблюдения за крокодилами в хронологическом порядке, пронумеровав их по очередности.
 
-<img width="837" height="455" alt="image" src="https://github.com/user-attachments/assets/9b353a04-1d43-4f20-9538-8cf8e4ad687b" />
-
-
 ```SQL
-WITH RECURSIVE PORIADOK AS(
-    SELECT 1 AS num
-    
-    UNION ALL
-    
-    SELECT num+1
-    FROM PORIADOK
-    WHERE num<(SELECT COUNT(*) FROM crocodiles)),
-    
-    sorted_data AS(
-    SELECT 
-        crocodiles.id,
-        crocodiles.observation_date,
-        dict_common_name.name AS common_name,
-        ROW_NUMBER() OVER (ORDER BY crocodiles.observation_date) AS ob_order
-    FROM crocodiles
-    JOIN dict_common_name ON crocodiles.common_name_id = dict_common_name.id)
-
-SELECT sorted_data.ob_order, sorted_data.id, sorted_data.observation_date, sorted_data.common_name
-FROM sorted_data
 ```
 
 
 ## Оконные функции
-###Задача 12
+Задача 12
 
 
