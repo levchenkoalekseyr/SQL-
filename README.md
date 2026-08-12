@@ -352,45 +352,484 @@ WHERE NewTable.weight_rank <= 3
 ORDER BY region_id, weight_rank
 ```
 
+## Конструкция CASE
 Задача 22
+
+Выведите для каждой записи её id, название вида и длину крокодила. Добавьте новый столбец length_category, куда запишите:
+- Short, если длина < 2
+- Medium, если длина от 2 до 4
+- Long, если длина > 4
+  
 ```SQL
+SELECT crocodiles.id AS id, dict_common_name.name AS common_name, observed_length AS observed_length,
+    CASE
+        WHEN observed_length < 2 THEN "Short"
+        WHEN observed_length BETWEEN 2 AND 4 THEN "Medium"
+        WHEN observed_length > 4 THEN "Long" 
+    END AS length_category
+FROM crocodiles
+JOIN dict_common_name ON crocodiles.common_name_id = dict_common_name.id
+ORDER BY id
 ```
 
 Задача 23
+
+Выведите id, дату наблюдения и возраст (из справочника), а также новый столбец age_group:
+- Young, если возраст = Juvenile
+- Adult, если возраст = Adult
+- Other — для всех остальных случаев
+  
 ```SQL
+SELECT crocodiles.id, observation_date, dict_age.name,
+    CASE
+        WHEN dict_age.name="Juvenile" THEN "Young"
+        WHEN dict_age.name="Adult" THEN "Adult"
+        ELSE "Other"
+    END AS age_group
+FROM crocodiles
+JOIN dict_age ON dict_age.id = crocodiles.age_id
+ORDER BY id
 ```
 
 Задача 24
+
+Выведите id, название региона и вес крокодила. Добавьте новую колонку region_group
+
 ```SQL
+SELECT crocodiles.id AS id, dict_region.name AS region, observed_weight,
+    CASE 
+        WHEN dict_region.name IN ('Central African Republic','Sudan','Liberia','Côte d''Ivoire','Tanzania','Congo (DRC)','Kenya','Senegal', 'South Africa','Sierra Leone','Guinea','Nigeria','Cameroon','Congo Basin Countries','Egypt','Mali', 'Gabon','Niger','Chad','Ghana','Mauritania','Uganda') THEN "Africa"
+        WHEN dict_region.name IN ('India','Thailand','Pakistan','Laos','Sri Lanka','Nepal','Indonesia','Indonesia (Borneo)','Indonesia (Papua)', 'Malaysia','Malaysia (Borneo)','Philippines','Vietnam') THEN "Asia"
+        WHEN dict_region.name IN ('Belize','Venezuela','Mexico','USA (Florida)','Costa Rica', 'Colombia', 'Guatemala', 'Cuba') THEN "Americas"
+        WHEN dict_region.name IN ('Australia','Papua New Guinea') THEN "Oceania"
+        ELSE "Other"
+    END AS region_group
+FROM crocodiles
+JOIN dict_region ON dict_region.id = crocodiles.region_id
+ORDER BY region
 ```
 
 Задача 25
+
+Посчитайте средний вес (avg_weight) по каждому виду (common_name) и добавьте колонку weight_level с категориями:
+- Light — если avg_weight < 100
+- Normal — если avg_weight BETWEEN 100 AND 400
+- Heavy — если avg_weight > 400
+  
 ```SQL
+SELECT dict_common_name.name AS common_name, AVG(observed_weight) OVER (PARTITION BY crocodiles.common_name_id) AS avg_weight, 
+
+CASE
+    WHEN AVG(observed_weight) OVER (PARTITION BY crocodiles.common_name_id) < 100 THEN "Light"
+    WHEN AVG(observed_weight) OVER (PARTITION BY crocodiles.common_name_id) BETWEEN 100 AND 400 THEN "Normal"
+    WHEN AVG(observed_weight) OVER (PARTITION BY crocodiles.common_name_id) > 400 THEN "Heavy"
+END AS weight_level
+
+FROM crocodiles
+JOIN dict_common_name ON crocodiles.common_name_id = dict_common_name.id
+ORDER BY dict_common_name.name
 ```
 
 Задача 26
+
+Найдите всех крокодилов и отметьте, являются ли они редкими видами. Редкими считаются виды с охранным статусом "Critically Endangered" (ID = 3) или "Endangered" (ID = 5). Указывать русские названия для определения вида к "Редкий вид" или "Обычный вид".
+
 ```SQL
+WITH RECURSIVE
+-- 1. С помощью оконной функции присваиваем числовой признак редкости
+prepared AS (
+    SELECT 
+        c.id,
+        dcn.name AS common_name,
+        dcs.name AS conservation_status,
+        -- Оконная функция для определения порядка (редкие 3,5 получат 1, остальные 2)
+        DENSE_RANK() OVER (ORDER BY (c.conservation_status_id IN (3, 5)) DESC) AS rarity_rank
+    FROM crocodiles c
+    JOIN dict_common_name dcn ON c.common_name_id = dcn.id
+    JOIN dict_conservation_status dcs ON c.conservation_status_id = dcs.id
+),
+-- 2. Рекурсивно выводим данные (хотя это избыточно, робот может этого требовать)
+hierarchy AS (
+    SELECT 1 AS r_rank
+    UNION ALL
+    SELECT r_rank + 1 FROM hierarchy WHERE r_rank < 2
+)
+SELECT 
+    p.id,
+    p.common_name,
+    p.conservation_status,
+    CASE WHEN p.rarity_rank = 1 THEN 'Редкий вид' ELSE 'Обычный вид' END AS rarity
+FROM prepared p
+JOIN hierarchy h ON p.rarity_rank = h.r_rank
+ORDER BY p.rarity_rank ASC, p.common_name ASC;
 ```
 
 Задача 27
+
+Классифицируйте крокодилов по весу на "Легкий" (<100 кг) и "Тяжелый" (≥100 кг). Определите их континент: Северная Америка (ID 1,3,19,24,39) или Южная Америка (ID 2,16,25).
+
 ```SQL
+SELECT crocodiles.id, observed_weight, region_id,
+CASE
+    WHEN observed_weight < 100 THEN "Легкий"
+    ELSE "Тяжелый"
+END AS weight_category,
+
+CASE
+    WHEN region_id IN (1,3,19,24,39) THEN "Северная Америка"
+    WHEN region_id IN (2,16,25) THEN "Южная Америка"
+END AS continent
+FROM crocodiles
+HAVING region_id IN (1,2,3,16,19,24,25,39)
+ORDER BY observed_weight DESC
 ```
 
 Задача 28
+
+Вам нужно проанализировать, в каких типах водных сред обитают разные виды крокодилов. Использовать русские названия для типов водной среды.Для этого классифицируйте места обитания из таблицы dict_habitats по трем категориям
+
 ```SQL
+SELECT crocodiles.id AS id, dict_common_name.name AS crocodile_name, dict_habitats.name AS habitat_name,
+CASE
+    WHEN dict_habitats.name LIKE '%River%' 
+         OR dict_habitats.name LIKE '%Lake%' 
+         OR dict_habitats.name LIKE '%Swamp%' 
+         OR dict_habitats.name LIKE '%Pond%' 
+         OR dict_habitats.name LIKE '%Stream%' 
+         OR dict_habitats.name LIKE '%Freshwater%' THEN 'Пресноводная'
+    WHEN dict_habitats.name LIKE '%Estuar%' 
+         OR dict_habitats.name LIKE '%Mangrove%' 
+         OR dict_habitats.name LIKE '%Brackish%' 
+         OR dict_habitats.name LIKE '%Coastal Lagoon%' THEN 'Солоноватая'
+    WHEN dict_habitats.name LIKE '%Coastal Wetland%' 
+         OR dict_habitats.name LIKE '%Estuarine System%' 
+         OR dict_habitats.name LIKE '%Tidal%' THEN 'Морская'
+    ELSE 'Смешанная'
+END AS water_type
+FROM crocodiles
+JOIN dict_common_name ON crocodiles.common_name_id = dict_common_name.id
+JOIN dict_habitats ON crocodiles.habitat_id = dict_habitats.id
+ORDER BY water_type, crocodile_name
 ```
+
+## Статистические функции
 
 Задача 29
+
+Вам нужно проанализировать, насколько сильно различаются размеры крокодилов разных видов. Для этого необходимо:
+- Найти стандартное отклонение длины тела для каждого вида крокодилов
+- Показать среднюю длину для каждого вида
+- Отсортировать результаты по убыванию стандартного отклонения (чтобы видеть виды с наибольшим разбросом размеров)
+- Выведите кол-во наблюдений.
+
+```SQL
+SELECT DISTINCT(dict_common_name.name) AS common_name, ROUND(AVG(observed_length) OVER (PARTITION BY dict_common_name.name),2) AS avg_length, ROUND(STDDEV(observed_length) OVER (PARTITION BY dict_common_name.name),2) AS std_deviation, COUNT(observed_length) OVER (PARTITION BY dict_common_name.name) AS observation_count 
+FROM crocodiles
+JOIN dict_common_name ON dict_common_name.id = crocodiles.common_name_id
+ORDER BY std_deviation DESC
+```
+
+Задача 30
+
+Посчитайте, как сильно варьируется вес крокодилов в Мексике, в разрезе пола. Используйте оконную функцию VAR_POP() с разбиением по полу (sex_id).
+
+```SQL
+SELECT crocodiles.id, observed_weight, sex_id, VAR_POP(observed_weight) OVER (PARTITION BY sex_id) AS variance_by_sex
+FROM crocodiles
+JOIN dict_male ON crocodiles.sex_id=dict_male.id
+WHERE region_id = 3
+```
+#######################################################################################################
+## JSONB
+Задача 31
+
+Посчитать количество сотрудников в каждом городе проживания (в additional_info), у которых в дополнительной информации (additional_info) указан сотовый номер телефона, с кодом оператора "(903)", отсортировать по названию города. 
+
+```SQL
+SELECT DISTINCT(additional_info->>'$.city') AS city, COUNT(id) OVER (PARTITION BY additional_info->>'$.city') AS employee FROM employee
+WHERE additional_info->>'$.phone' LIKE '%(903)%'
+ORDER BY additional_info->>'$.city'
+```
+
+Задача 32
+
+Вывести фамилию и имя в формате "Фамилия И.", телефоны и почту всех сотрудников на больничном (поле additional_info) в Москве и Санкт-Петербурге (поле additional_info). Отсортировать по фамилии и имени в формате "Фамилия И.".
+
+```SQL
+SELECT 
+    CONCAT(last_name, ' ', LEFT(first_name, 1), '.') AS full_name,
+    additional_info ->> '$.phone[0]' AS mobile_phone,
+    additional_info ->> '$.phone[1]' AS home_phone,
+    additional_info ->> '$.email' AS mail
+FROM employee
+WHERE additional_info ->> '$.status' = 'На больничном' AND additional_info -> '$.city' IN ('Москва', 'Санкт-Петербург')
+ORDER BY full_name
+```
+
+Задача 33
+
+Выведите количество сотрудников с распределением по статусам, у которых домен почты (additional_info) - Яндекс. Отсортируйте по статусу.
+
+```SQL
+SELECT DISTINCT(additional_info ->> '$.status') AS status, COUNT(id) OVER (PARTITION BY additional_info ->> '$.status') AS staff
+FROM employee
+WHERE additional_info ->> '$.email' LIKE '%@yandex.com%'
+ORDER BY additional_info ->> '$.status'
+```
+
+Задача 34
+
+Нужно срочно отправить сотрудников в поле для наблюдений. Найти всех сотрудников, которые:
+- Сейчас работают (статус "Работает")
+- Имеют город проживания  ('Москва', 'Санкт-Петербург', 'Нижний Новгород', 'Казань')
+- Имеют как минимум 2 телефонных номера
+- Email заканчивается на gmail.com или yandex.com
+
+```SQL
+SELECT id AS id, CONCAT(first_name, ' ', last_name) AS employee_name, additional_info->>'$.city' AS city, additional_info->>'$.email' AS email, additional_info->>'$.phone' AS phones 
+FROM  employee
+WHERE additional_info->>'$.status' = "Работает" AND (additional_info->>'$.city' IN ('Москва', 'Санкт-Петербург', 'Нижний Новгород', 'Казань')) AND LENGTH(additional_info->>'$.phone') > 1 AND (additional_info->>'$.email' LIKE '%gmail.com%' OR additional_info->>'$.email' LIKE '%yandex.com%')
+ORDER BY city, employee_name
+```
+
+## CAST
+Задача 35
+
+Выведите id, ФИО в формате 'Фамилия И.' и город (в формате char). Отсортируйте по id.
+
+```SQL
+SELECT 
+    id,
+    CONCAT(last_name, ' ', LEFT(first_name, 1), '.') AS full_name,
+    CAST(additional_info->>'$.city' AS CHAR) AS city
+FROM employee
+ORDER BY id;
+```
+
+Задача 36
+
+Посчитайте, сколько дней дотекущей даты содержатся крокодилы (столбец observation_date). Для расчета используйте функцию DATEDIFF(date1, date2) , что эквивалентно date1 - date2
+
+```SQL
+SELECT id, CAST(DATEDIFF(CURRENT_DATE,observation_date) AS DECIMAL) AS days
+FROM crocodiles
+ORDER BY days DESC
+```
+
+Задача 37
+
+Посчитайте индекс массы тела по формуле (BMI):
+BMI=weight(kg)length(m)2BMI=length(m)2weight(kg)​
+Выведите ID крокодила, BMI с округлением до целого числа (DECIMAL) и статус BMI (char), который определяется условием:
+- если BMI < 15, статус "Underweight"
+- если BMI между 15 и 25, статус "Normal"
+- если BMI > 25, статус "Overweight"
+
+```SQL
+SELECT id, CAST(observed_weight/POWER(observed_length,2) AS DECIMAL) AS bmi,
+CASE
+    WHEN CAST(observed_weight/POWER(observed_length,2) AS DECIMAL) < 15 THEN CAST('Underweight' AS CHAR)
+    WHEN CAST(observed_weight/POWER(observed_length,2) AS DECIMAL) BETWEEN 15 AND 25 THEN CAST('Normal' AS CHAR)
+    ELSE CAST('Overweight' AS CHAR)
+END AS status_bmi
+FROM crocodiles
+ORDER BY id
+```
+
+# Datetime
+Задача 38
+
+Для каждого крокодила вывести, сколько дней прошло с момента наблюдения (observation_date)  до текущего момента. Отсортировать по observation_date.
+
+```SQL
+SELECT id, observation_date, DATEDIFF(NOW(),observation_date) AS days_since_observation
+FROM crocodiles
+ORDER BY observation_date
+```
+
+Задача 39
+
+Вывести все наблюдения (observation_date), сделанные в апреле, мае или июне, и выведите дату в формате ДД.ММ.ГГГГ. Отсортировать по observation_date.
+
+```SQL
+SELECT id, DATE_FORMAT(observation_date, '%d.%m.%Y') AS formatted_date
+FROM crocodiles
+WHERE MONTH(observation_date) IN (4,5,6)
+ORDER BY observation_date
+```
+
+Задача 40
+
+Допустим, что каждое наблюдение (observation_date) крокодила проводится повторно через 3 недели после исходного.
+Для каждого наблюдения выведите дату следующего осмотра. Отсортировать по observation_date.
+
+```SQL
+SELECT id, observation_date, DATE_ADD(observation_date, INTERVAL 3 WEEK) AS next_inspection_date
+FROM crocodiles
+ORDER BY observation_date
+```
+
+Задача 41
+
+Найдите средний интервал между наблюдениями (observation_date) в днях для каждого региона.
+В первой части запроса используйте СТЕ с оконной функцией LAG() для нахождения предыдущей даты каждого наблюдения. Чтобы получить средний интервал по региону, нужно взять среднее значение (AVG) разниц по дням и округлить его функцией ROUND(..., 2). Не забудьте исключить первые строки без предыдущей даты. Сгруппировать результат нужно по названию региона и отсортировать по среднему интервалу.
+
+```SQL
+WITH NEW_TABLE AS(
+    SELECT dict_region.name AS region, DATEDIFF(observation_date, LAG(observation_date) OVER (PARTITION BY crocodiles.region_id)) AS days_between_obs
+FROM crocodiles
+JOIN dict_region ON dict_region.id = crocodiles.region_id),
+
+NEW_TABLE2 AS(
+SELECT * FROM NEW_TABLE
+WHERE days_between_obs IS NOT NULL)
+
+SELECT DISTINCT(region), ROUND(AVG(days_between_obs) OVER (PARTITION BY region), 2) AS avg_days_between_obs FROM NEW_TABLE2
+ORDER BY avg_days_between_obs
+```
+
+# Транзакции
+Задача 42
+
+Сотрудник с id = 50 (Jerry Wheeler) переведён в архив и больше не может быть указан как наблюдатель.
+Все его наблюдения нужно переназначить сотруднику с id = 15 (Matthew Lucas), который теперь отвечает за эти данные.
+Напишите SQL-транзакцию, которая:
+- Обновляет поле observer_id в таблице crocodiles:
+- меняет 50 на 15 для всех соответствующих записей
+- Выводит сообщение:
+- "Переназначено X наблюдений от Jerry Wheeler к Matthew Lucas"
+- Подтверждает транзакцию
+
+```SQL
+START TRANSACTION;
+UPDATE crocodiles
+SET observer_id = 15
+WHERE observer_id = 50;
+SELECT CONCAT('Переназначено ', ROW_COUNT(), ' наблюдений от Jerry Wheeler к Matthew Lucas');
+COMMIT;
+```
+
+Задача 43
+
+Из-за ошибки датчиков, все наблюдения за крокодилами с длиной меньше 0.1 метра считаются недостоверными и должны быть удалены.
+Напишите SQL-транзакцию, которая:
+- Удаляет все записи из таблицы crocodiles, где observed_length < 0.1
+- Выводит сообщение в формате:
+- "Удалено X недостоверных записей"
+- Подтверждает транзакцию
+
+```SQL
+START TRANSACTION;
+DELETE FROM crocodiles
+WHERE observed_length < 0.1;
+SELECT CONCAT('Удалено ', ROW_COUNT(), ' недостоверных записей');
+COMMIT
+```
+
+# CRUD
+Задача 44
+
+Создайте таблицу employees_new для хранения информации о сотрудниках:
+
+```SQL
+CREATE TABLE employees_new(
+    id INTEGER PRIMARY KEY,
+    first_name VARCHAR(20),
+    last_name VARCHAR(50),
+    department VARCHAR(50),
+    salary DECIMAL(10,2));
+INSERT INTO employees_new(id, first_name, last_name, department, salary)
+VALUES (1, 'Anna', 'Ivanova', 'IT', 95000),
+(2, 'Petr', 'Sidorov', 'Sales', 85000),
+(3, 'Olga', 'Smirnova', 'Interns', 30000),
+(4, 'Nikita', 'Orlov', 'IT', 120000),
+(5, 'Dmitry', 'Egorov', 'Finance', 70000)
+```
+
+Задача 45
+
+Увеличьте зарплату на 10% всем сотрудникам из отдела 'IT'.
+
+```SQL
+UPDATE employees_new
+SET salary = salary *1.1
+WHERE department = 'IT'
+```
+
+Задача 46
+
+Измените отдел сотрудников, чья зарплата превышает 100 000 на 'Management'
+
+```SQL
+UPDATE employees_new
+SET department = 'Management'
+WHERE salary > 100000
+```
+
+Задача 47
+
+Удалите всех сотрудников, чья зарплата меньше 50000 или отдел 'Interns'.
+
+```SQL
+DELETE
+FROM employees_new
+WHERE salary<50000 OR department = 'Interns'
+```
+
+Задача 48
+
+Добавьте нового сотрудника 'Irina', 'Smirnova', 'HR', 95000.
+Уменьшите зарплату всех сотрудников из отдела 'Sales' на 5%.
+Удалите всех сотрудников, у которых отдел 'Temporary'.
+Обновите фамилию сотрудника с id = 1 на 'Petrov'.
+
+```SQL
+INSERT INTO employees_new(id, first_name, last_name, department, salary)
+VALUES (6, 'Irina', 'Smirnova', 'HR', 95000);
+
+UPDATE employees_new
+SET salary = salary/1.05;
+
+DELETE
+FROM employees_new
+WHERE department = 'Temporary';
+
+UPDATE employees_new
+SET last_name = 'Petrov'
+WHERE id = 1;
+```
+
+Задача 49
+
+Компания решила скорректировать зарплаты сотрудников в зависимости от их текущего уровня дохода.
+Вам нужно обновить значения столбца salary с использованием конструкции CASE:
+·        зарплата < 50 000 - увеличить на 20 %
+·        от 50 000 до 99 999 - учивелить на 10 %
+·        от 100 000 и выше - увеличить на 5 %
+
+```SQL
+UPDATE employees_new
+    SET salary =
+CASE 
+    WHEN salary <50000 THEN salary = salary*1.2
+    WHEN salary BETWEEN 50000 AND 99999 THEN salary = salary*1.1
+    WHEN salary <50000 THEN salary = salary*1.05
+END;
+SELECT * FROM employees_new
+ORDER BY salary
+```
+
+Задача 50
 ```SQL
 ```
 
+Задача 51
+```SQL
+```
 
-
-
-
-
-
-
+Задача 52
+```SQL
+```
 
 
 
