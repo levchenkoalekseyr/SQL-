@@ -4,6 +4,7 @@
 
 ## CTE, множественный и рекурсиный CTE
 ###Задача 1
+
 <img width="840" height="172" alt="image" src="https://github.com/user-attachments/assets/388fa7ec-0a60-40dd-9d0a-3ec49177fc13" />
 
 
