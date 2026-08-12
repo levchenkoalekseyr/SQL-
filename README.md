@@ -114,7 +114,7 @@
 <img width="837" height="455" alt="image" src="https://github.com/user-attachments/assets/9b353a04-1d43-4f20-9538-8cf8e4ad687b" />
 
 
-```
+```SQL
 WITH RECURSIVE PORIADOK AS(
     SELECT 1 AS num
     
