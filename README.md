@@ -114,6 +114,30 @@
 <img width="837" height="455" alt="image" src="https://github.com/user-attachments/assets/9b353a04-1d43-4f20-9538-8cf8e4ad687b" />
 
 
+```
+WITH RECURSIVE PORIADOK AS(
+    SELECT 1 AS num
+    
+    UNION ALL
+    
+    SELECT num+1
+    FROM PORIADOK
+    WHERE num<(SELECT COUNT(*) FROM crocodiles)),
+    
+    sorted_data AS(
+    SELECT 
+        crocodiles.id,
+        crocodiles.observation_date,
+        dict_common_name.name AS common_name,
+        ROW_NUMBER() OVER (ORDER BY crocodiles.observation_date) AS ob_order
+    FROM crocodiles
+    JOIN dict_common_name ON crocodiles.common_name_id = dict_common_name.id)
+
+SELECT sorted_data.ob_order, sorted_data.id, sorted_data.observation_date, sorted_data.common_name
+FROM sorted_data
+```
+
+
 ## Оконные функции
 ###Задача 12
 
