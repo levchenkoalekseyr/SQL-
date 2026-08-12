@@ -855,24 +855,6 @@ SELECT * FROM employees_new
 ORDER BY salary
 ```
 
-Задача 50
-```SQL
-```
-
-Задача 51
-```SQL
-```
-
-Задача 52
-```SQL
-```
-
-
-​
-
- id  | common_name_id | scientific_name_id | family_id | genus_id | observed_length | observed_weight | age_id | sex_id | observation_date    | region_id | habitat_id | conservation_status_id | observer_id | notes                                                                             
-Affected rows: 250. Showed first 100 rows
-
 
 
 
