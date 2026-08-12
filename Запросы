@@ -1,0 +1,6 @@
+with adult_crocodiles AS (
+    select crocodiles.id AS id, dict_common_name.name AS common_name, crocodiles.observed_weight AS observed_weight, dict_age.name AS age from crocodiles
+    JOIN dict_age ON crocodiles.age_id = dict_age.id
+    JOIN dict_common_name ON crocodiles.common_name_id = dict_common_name.id
+    WHERE observed_weight > 1000 and dict_age.name = 'Adult')
+select * from adult_crocodiles
