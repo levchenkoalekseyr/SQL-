@@ -230,4 +230,172 @@ FROM sorted_data
 ## Оконные функции
 Задача 12
 
+Выведите для каждой записи из таблицы crocodiles её id, название вида крокодила и его вес. Добавьте колонку с суммарным весом всех крокодилов этого вида.
+
+```SQL
+SELECT crocodiles.id, dict_common_name.name, observed_weight, SUM(observed_weight) OVER (PARTITION BY common_name_id) AS total_weight
+FROM crocodiles
+JOIN dict_common_name ON dict_common_name.id = crocodiles.common_name_id
+ORDER BY name, id
+```
+
+Задача 13
+
+Выведите для каждой записи из таблицы crocodiles её id, название региона, дату наблюдения. Добавьте колонку с самой ранней датой наблюдения в этом регионе.
+
+```SQL
+SELECT crocodiles.id, dict_region.name AS region, observation_date, MIN(observation_date) OVER (PARTITION BY crocodiles.region_id) first_observation
+FROM crocodiles
+JOIN dict_region ON dict_region.id = crocodiles.region_id
+ORDER BY observation_date DESC
+```
+
+Задача 14
+
+Ученые хотят понять, насколько вес каждого отдельного крокодила отличается от среднего веса для его вида. Это поможет выявить особей с аномально низким или высоким весом.
+
+```SQL
+SELECT crocodiles.id, crocodiles.common_name_id, observed_weight, AVG(observed_weight) OVER (PARTITION BY common_name_id) AS avg_weight_forspecies, observed_weight-AVG(observed_weight) OVER (PARTITION BY common_name_id) AS weight_difference_from_avf
+FROM crocodiles
+ORDER BY common_name_id, id
+```
+
+Задача 15
+
+Экологи хотят увидеть разброс весовых характеристик внутри каждой категории сохранения видов.
+
+```SQL
+SELECT 
+    crocodiles.id, 
+    crocodiles.conservation_status_id, 
+    observed_weight, 
+    MIN(observed_weight) OVER (PARTITION BY crocodiles.conservation_status_id) AS min_weight_in_status,
+    MAX(observed_weight) OVER (PARTITION BY crocodiles.conservation_status_id) AS max_weight_in_status,
+    observed_weight - MIN(observed_weight) OVER (PARTITION BY crocodiles.conservation_status_id) AS diff_from_min
+FROM crocodiles
+ORDER BY conservation_status_id, observed_weight;
+```
+
+Задача 16
+
+Исследователям нужно отслеживать общий вес всех крокодилов, наблюдавшихся нарастающим итогом по мере проведения наблюдений.
+
+```SQL
+SELECT 
+    observation_date, 
+    observed_weight, 
+    SUM(observed_weight) OVER (ORDER BY observation_date) AS cumulative_total_weight
+FROM crocodiles
+ORDER BY observation_date
+```
+
+Задача 17
+
+Выведите для каждой записи из таблицы crocodiles её id, название вида и дату наблюдения. Добавьте порядковый номер наблюдения по дате (от самого раннего к самому позднему).
+
+```SQL
+SELECT crocodiles.id, dict_common_name.name, observation_date, ROW_NUMBER() OVER (ORDER BY observation_date) AS obs_number
+FROM crocodiles
+JOIN dict_common_name ON dict_common_name.id = crocodiles.id
+ORDER BY obs_number
+```
+
+Задача 18
+
+Выведите для каждой записи из таблицы crocodiles её id, название региона, название вида и длину. Добавьте два столбца: ранг (RANK) и плотный ранг (DENSE_RANK) длины внутри региона (от самого длинного крокодила к самому короткому).
+
+```SQL
+SELECT crocodiles.id, 
+    dict_region.name AS region, 
+    dict_common_name.name AS common_name, 
+    observed_length, 
+    RANK() OVER (PARTITION BY crocodiles.region_id ORDER BY observed_length DESC) AS rank_length, 
+    DENSE_RANK() OVER (PARTITION BY crocodiles.region_id ORDER BY observed_length DESC) AS dense_rank_length
+FROM crocodiles
+JOIN dict_region ON crocodiles.region_id=dict_region.id
+JOIN dict_common_name ON crocodiles.common_name_id=dict_common_name.id
+ORDER BY region, common_name
+```
+
+Задача 19
+
+Выведите для каждой записи из таблицы crocodiles её id, название региона, дату наблюдения и вид крокодила. Добавьте колонку с датой предыдущего наблюдения в этом же регионе (по времени).
+
+```SQL
+SELECT crocodiles.id AS id, dict_region.name AS region, dict_common_name.name AS common_name, observation_date AS observation_date, LAG(observation_date) OVER (PARTITION BY crocodiles.region_id ORDER BY observation_date) AS prev_observation_date
+FROM crocodiles
+JOIN dict_common_name ON crocodiles.common_name_id = dict_common_name.id
+JOIN dict_region ON dict_region.id = crocodiles.region_id
+ORDER BY crocodiles.id
+```
+
+Задача 20
+
+Выведите для каждой записи её id, название региона, дату наблюдения и длину крокодила. Добавьте колонку с длиной следующего крокодила, зафиксированного в том же регионе (по времени).
+
+```SQL
+SELECT crocodiles.id, dict_region.name AS region, observation_date, observed_length, LEAD(observed_length) OVER (PARTITION BY crocodiles.region_id ORDER BY observation_date) AS next_length
+FROM crocodiles
+JOIN dict_region ON dict_region.id = crocodiles.region_id
+ORDER BY crocodiles.id
+```
+
+Задача 21
+
+Для планирования программ сохранения нужно определить трех самых тяжелых крокодилов в каждом регионе наблюдения.
+Что нужно сделать:Составить рейтинг крокодилов по весу внутри каждого региона и выбрать только первых трех.
+
+```SQL
+SELECT region_id, observed_weight, weight_rank
+FROM (SELECT crocodiles.region_id AS region_id, observed_weight, RANK() OVER (PARTITION BY region_id ORDER BY observed_weight DESC) AS weight_rank FROM crocodiles) AS NewTable
+WHERE NewTable.weight_rank <= 3
+ORDER BY region_id, weight_rank
+```
+
+Задача 22
+```SQL
+```
+
+Задача 23
+```SQL
+```
+
+Задача 24
+```SQL
+```
+
+Задача 25
+```SQL
+```
+
+Задача 26
+```SQL
+```
+
+Задача 27
+```SQL
+```
+
+Задача 28
+```SQL
+```
+
+Задача 29
+```SQL
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
